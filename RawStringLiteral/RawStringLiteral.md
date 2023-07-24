@@ -184,3 +184,4 @@ More examples
 
 1. I am not sure if Discourse is the right place to draft a new proposal.
 2. For other corner case, just learn from C# 11's raw string literal, which in turn learnt from years of other language's previous experiences.
+3. If anyone has more ideas related to string literal or template, please add here, because if you tell it too late (e.g. after the feature is finalized/implemented), your ideas will become breaking changes.
