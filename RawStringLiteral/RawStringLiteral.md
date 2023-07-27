@@ -80,16 +80,16 @@ Such syntax should not be clumsy, as such kind of strings are rare (we want to c
 ## 4\. Indentation - Any whitespace to the left of the closing delimiter (```, or ````, or `````, ...) will be removed from the string literal
 
 ````````````````js
-    const markdownExample = @````
-       |```json
-       |{
-       |  "firstName": "John",
-       |  "lastName": "Smith",
-       |  "age": 25
-       |}
-       |```
-       |
-        ````
+  const markdownExample = @````
+     |```json
+     |{
+     |  "firstName": "John",
+     |  "lastName": "Smith",
+     |  "age": 25
+     |}
+     |```
+     |
+      ````
 ````````````````
 Note: The | characters are not really in the string, they're for illustrating how the string is indented and that the whitespaces at | and on the left of | are not captured in the string.
 
@@ -179,6 +179,119 @@ More examples
 - Any non-whitespace characters (except comments) following the opening quote on the same line are illegal, and will be treated as unterminated single-line raw string literal.
 - Whitespace only lines below the opening quote are included in the string literal.
 
+## 10. Why this syntax
+
+### Why not just open with ```
+
+Because ``` is not fully backwards compatible. See https://github.com/tc39/proposal-string-dedent/issues/40, and https://github.com/tc39/proposal-string-dedent/issues/8, and https://gist.github.com/michaelficarra/70ce798feb25fdc91508f387190053a1, and my reply before this proposal https://es.discourse.group/t/raw-string-literals-that-can-contain-any-arbitrary-text-without-the-need-for-special-escape-sequences/1757/2
+
+### Why the @ character for opening delimiter
+
+Because @``, @```, @````, ... are never valid JavaScript syntax before, so no backwards compatibility issue.
+
+We also can't use $\`\`, $\`\`\`, ..., as $ is a valid variable identifier (jQuery).
+
+### Why not just use other delimiter character/sequence than backtick, double quotes or single quote?
+
+- If the delimiter character/sequence is fixed, no matter what delimiting character/sequence you choose, you cannot embed the closing delimiter character/sequence in the content without escaping. One of the goals of this feature, is to be able to embed arbitrary text without escaping, and to do so, the opening and closing delimiter sequence have to be flexible.
+- We may use other flexible sequence than @``, but not sure if this would waste the room of possible syntaxes for other future enhancements.
+
+## 11. Use cases of raw string literal
+
+### (a) MySQL query
+
+With MySQL, the following situations are common
+
+````js
+const searchUser = () => {
+    const query = `select *
+from \`users\`
+where \`name\` = ?`
+}
+````
+Allowing raw string representation without escaping, and with proper indentation, will make it less troublesome to maintain and less error prone.
+````js
+const searchUser = () => {
+    const query = @``
+        select *
+        from `users`
+        where `name` = ?
+        ``
+    ......
+}
+````
+
+### (b) Markdown embedding or generation
+
+Without raw string literal feature, we have to do this (have to escape each backtick):
+````````js
+const generateMarkdown = () => {
+    const markdownExample = `\`\`\`json
+{
+  "firstName": "John",
+  "lastName": "Smith",
+  "age": 25
+}
+\`\`\`
+`
+    doSomething(markdownExample)  // Output/process the markdown somewhere
+}
+````````
+or this (have to escape each double quote):
+````````js
+const generateMarkdown = () => {
+    const markdownExample = [
+        "```json",
+        "{",
+        "  \"firstName\": \"John\",",
+        "  \"lastName\": \"Smith\",",
+        "  \"age\": 25",
+        "}",
+        "```"
+    ].join("\n")
+
+    doSomething(markdownExample)  // Output/process the markdown somewhere
+}
+````````
+
+With raw string literal feature, we don't need to escape anything:
+````````js
+const generateMarkdown = () => {
+    const markdownExample = @````
+        ```json
+        {
+          "firstName": "John",
+          "lastName": "Smith",
+          "age": 25
+        }
+        ```
+        ````
+    doSomething(markdownExample)  // Output/process the markdown somewhere
+}
+````````
+### (c) Regular expressions when string interpolation is also necessary
+
+Without this proposal, the closest way to represent "raw" regex is this way:
+`````js
+new RegExp(String.raw`someRegex\b${processedSearchKeyword}\s*(?:\(?HKD\)?):?\s*`, "i")
+`````
+Even so, regex itself is already quite backslash heavy.
+
+If the regex pattern itself contains several backticks and "${xxx}" to search for, it will be a bit error-prone to eyeball which backslashes are really in the regex and which are only for escaping characters at JavaScript side.
+
+### (d) XML/HTML/Source code embedding or generation
+
+If we work on some HTML, XML, or even source code generators (for e.g. JavaScript, Linux commands, PowerShell commands), we often need to include special characters (", ', $, ` at the same time). The ability to write them in unescaped manner with clear indentation will help improvement readability and maintainability.
+
+One may argue the use of backtick is not frequent. But it is a was. Nowadays, many programming languages are adopting the backtick character just to avoid escaping double quotes, so backtick character is becoming more and more common.
+
+Raw string literal may not solve all problems, but it can at least end the wild goose chase of choosing escape characters related to open and closing delimiter and interpolation delimiter.
+
+### (e) Unit tests involving MySQL query, Markdown, XML
+
+Unit tests are also common places where we want to embed these contents in source codes instead of separate files.
+
+As explained in (a) and (b), the raw string literal would improve clarity.
 
 # PS:
 
